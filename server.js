@@ -25,33 +25,95 @@ Categories.hasMany(Bookmarks);
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
+app.use(express.urlencoded({extended:false}))
+
 
 app.get("/", (req, res) => res.redirect("/bookmarks"));
-app.get("/bookmarks", async (req, res, next) => {
-  const bookmarks = await Bookmarks.findAll({ include: [Categories] });
 
-  const html = bookmarks
-    .map((bookmark) => {
-      const div = `
+app.post("/bookmarks", async (req, res, next) => {
+  try {
+    const bookmark = await Bookmarks.create(req.body);
+
+    res.redirect(`/categories/${bookmark.categoryId}`);
+  } catch (ex) {
+    next(ex);
+  }
+});
+
+app.get("/bookmarks", async (req, res, next) => {
+  try {
+    const bookmarks = await Bookmarks.findAll({ include: [Categories] });
+    const categories = await Categories.findAll();
+
+    const html = bookmarks
+      .map((bookmark) => {
+        return `
         <div>
-        ${bookmark.name} <a href = '/categories/categoryName'> ${bookmark.category.name} </a>
+        ${bookmark.name} 
+        <a href = '/categories/${bookmark.categoryId}'> ${bookmark.category.name} </a>
         </div>
         `;
-      return div;
-    })
-    .join("");
+      })
+      .join("");
 
-  res.send(`
+    res.send(`
     <html>
+       
+
         <head>
             <title> ACME Bookmarks Page</title>
             <h1> ACME Bookmarks Page</h1>
-            <ul>
+            <div>
+            <form method='POST'>
+            <input name='name' placeholder='name of bookmark' />
+            <select name='categoryId'>
+            ${categories
+              .map((category) => {
+                return `<option value='${category.id}'>${category.name} </option>`;
+              })
+              .join("")}
+            </select>
+            <button>Create</button
+            </form> 
+            </div>
                 ${html}
-            </ul>
         </head>
     </html>
     `);
+  } catch (ex) {
+    next(ex);
+  }
+});
+
+app.get("/categories/:id", async (req, res, next) => {
+  try {
+    const category = await Categories.findByPk(req.params.id, {
+      include: [Bookmarks],
+    });
+    const html = category.bookmarks
+      .map((bookmark) => {
+        return `
+     <div>
+     ${bookmark.name}
+        </div>`;
+      })
+      .join("");
+    res.send(`
+   <html>
+    <head>
+      <title> Acme Bookmarks</title>
+    </head>
+      <body>
+      <h1> ACME BOOKMARKS <h1>
+      <h2> ${category.name}</h2>
+      <a href = '/bookmarks'>BACK</a>
+      ${html}
+      </body>
+   </html>
+    `);
+  } catch (ex) {
+    next(ex);
+  }
 });
 
 const start = async () => {
@@ -70,8 +132,8 @@ const start = async () => {
     await Bookmarks.create({ name: "Indeed.com", categoryId: coding.id });
     await Bookmarks.create({ name: "stackoverflow.com", categoryId: jobs.id });
     await Bookmarks.create({ name: "linkedIn.com", categoryId: jobs.id });
-    await Bookmarks.create({ name: "msdn.com", categoryId: coding.id });
-    await Bookmarks.create({ name: "bing.com", categoryId: search.id });
+    await Bookmarks.create({ name: "MSDN.com", categoryId: coding.id });
+    await Bookmarks.create({ name: "Bing.com", categoryId: search.id });
   } catch (ex) {
     console.log(ex);
   }
