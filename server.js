@@ -25,10 +25,17 @@ Categories.hasMany(Bookmarks);
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 3000;
-app.use(express.urlencoded({extended:false}))
-
+const methodOverride = require("method-override");
+app.use(methodOverride("_method"));
+app.use(express.urlencoded({ extended: false }));
 
 app.get("/", (req, res) => res.redirect("/bookmarks"));
+
+app.delete("/bookmarks/:id", async (req, res, next) => {
+  const bookmark = await Bookmarks.findByPk(req.params.id);
+  await bookmark.destroy();
+  res.redirect(`/categories/${bookmark.categoryId}`);
+});
 
 app.post("/bookmarks", async (req, res, next) => {
   try {
@@ -95,6 +102,8 @@ app.get("/categories/:id", async (req, res, next) => {
         return `
      <div>
      ${bookmark.name}
+     <form method = 'POST' action = '/bookmarks/${bookmark.id}?_method=delete'>
+      <button>X</button>
         </div>`;
       })
       .join("");
